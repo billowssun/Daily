@@ -1,38 +1,67 @@
-import { colors } from '../theme';
+import { CalendarDays, CheckSquare, Home, Layers3, PenLine } from 'lucide-react-native';
 
-export const initialTasks = [
-  { id: 'prototype', title: '完成产品原型设计', time: '10:00', done: true },
-  { id: 'meeting', title: '与团队周会', time: '11:30', done: false },
-  { id: 'fitness', title: '健身 30 分钟', time: '18:30', done: false },
-  { id: 'reading', title: '阅读《清醒思考》', time: '20:00', done: false },
-  { id: 'review', title: '复盘今日重点', time: '21:30', done: true },
-  { id: 'plan', title: '整理明日计划', time: '22:00', done: true },
+import type { RixuState, TabItem } from '../types';
+
+export const tabs: TabItem[] = [
+  { key: 'home', label: '首页', icon: Home },
+  { key: 'note', label: '随记', icon: PenLine },
+  { key: 'todo', label: '待办', icon: CheckSquare },
+  { key: 'calendar', label: '日历', icon: CalendarDays },
+  { key: 'overview', label: '总览', icon: Layers3 },
 ];
 
-export const weekDays = [
-  { name: '一', date: '20', active: true, events: [colors.green600] },
-  { name: '二', date: '21', active: false, events: [colors.gold500, colors.gold500] },
-  { name: '三', date: '22', active: false, events: [colors.violet500, colors.violet500] },
-  { name: '四', date: '23', active: false, events: [] },
-  { name: '五', date: '24', active: false, events: [colors.green600, colors.green600] },
-  { name: '六', date: '25', active: false, events: [] },
-  { name: '日', date: '26', active: false, events: [colors.cyan600] },
-];
-
-export const aiSummary = {
-  focus: 78,
-  done: 18,
-  hours: 6.5,
-  trend: [18, 26, 20, 32, 24, 36, 30],
-};
-
-export const financeSummary = {
-  total: 238600,
-  growth: 6.5,
-  allocation: [
-    { label: '现金及存款', value: 45, color: colors.green600 },
-    { label: '投资', value: 35, color: colors.cyan600 },
-    { label: '保险', value: 10, color: colors.violet500 },
-    { label: '其他', value: 10, color: colors.gold500 },
+export const initialState: RixuState = {
+  notes: [
+    {
+      id: 'note-idea-web',
+      content: '把零碎想法先放进随记箱，每天晚上统一整理。',
+      status: 'converted',
+      createdAt: '2026-07-01T09:20:00.000Z',
+      updatedAt: '2026-07-01T09:40:00.000Z',
+      convertedTaskId: 'task-review-notes',
+    },
+    {
+      id: 'note-calendar',
+      content: '日历要能看到带日期的待办，不然闭环不明显。',
+      status: 'inbox',
+      createdAt: '2026-07-02T15:10:00.000Z',
+      updatedAt: '2026-07-02T15:10:00.000Z',
+    },
+    {
+      id: 'note-global',
+      content: '做一个总览，能看到随记、待办、日历之间怎么联动。',
+      status: 'inbox',
+      createdAt: '2026-07-03T08:30:00.000Z',
+      updatedAt: '2026-07-03T08:30:00.000Z',
+    },
+  ],
+  tasks: [
+    {
+      id: 'task-review-notes',
+      title: '整理随记箱',
+      detail: '把可行动的想法转成待办，其余保留在收集箱。',
+      dueDate: '2026-07-03',
+      done: false,
+      createdAt: '2026-07-01T09:40:00.000Z',
+      updatedAt: '2026-07-01T09:40:00.000Z',
+      sourceNoteId: 'note-idea-web',
+    },
+    {
+      id: 'task-calendar-flow',
+      title: '确认日历联动规则',
+      detail: '只有带日期的待办进入日历。',
+      dueDate: '2026-07-04',
+      done: true,
+      createdAt: '2026-07-02T16:00:00.000Z',
+      updatedAt: '2026-07-02T18:30:00.000Z',
+    },
+    {
+      id: 'task-undated',
+      title: '收集下一版想法',
+      detail: '先不安排日期，停留在待办池。',
+      done: false,
+      createdAt: '2026-07-03T10:00:00.000Z',
+      updatedAt: '2026-07-03T10:00:00.000Z',
+    },
   ],
 };
