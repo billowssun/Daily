@@ -38,7 +38,7 @@ export function OverviewPage({ isDesktop, notes, tasks, onNavigate }: OverviewPa
         <Kpi icon={<CalendarDays size={20} color={colors.green700} />} label="本周日历项" value={weekTasks.length} />
       </View>
 
-      <View style={styles.grid}>
+      <View style={[styles.grid, !isDesktop && styles.stack]}>
         <Section title="下一步行动" cta="去待办" onPress={() => onNavigate('todo')}>
           {todayTasks.length === 0 ? (
             <Text style={styles.muted}>今天没有安排待办，可以从随记箱整理一个。</Text>
@@ -141,10 +141,12 @@ function TaskLine({ task, showDate }: { task: Task; showDate?: boolean }) {
 const styles = StyleSheet.create({
   kpiGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
   },
   kpi: {
     flex: 1,
+    minWidth: 120,
   },
   kpiValue: {
     color: colors.green800,
@@ -160,6 +162,9 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     gap: 12,
+  },
+  stack: {
+    flexDirection: 'column',
   },
   sectionHeader: {
     alignItems: 'center',

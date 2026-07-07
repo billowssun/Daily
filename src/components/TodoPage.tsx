@@ -21,13 +21,13 @@ export function TodoPage({ isDesktop, notes, tasks, onCreate, onEdit, onDelete, 
 
   return (
     <ScrollView contentContainerStyle={[sharedStyles.page, isDesktop && sharedStyles.pageDesktop]}>
-      <View style={styles.headerRow}>
+      <View style={[styles.headerRow, !isDesktop && styles.headerStack]}>
         <View style={sharedStyles.pageHeader}>
           <Text style={sharedStyles.eyebrow}>行动池</Text>
           <Text style={sharedStyles.title}>待办</Text>
           <Text style={sharedStyles.subtitle}>无日期待办留在行动池；加上日期后自动进入日历。</Text>
         </View>
-        <Pressable style={sharedStyles.button} onPress={onCreate}>
+        <Pressable style={[sharedStyles.button, !isDesktop && styles.headerButton]} onPress={onCreate}>
           <Plus size={18} color={colors.white} />
           <Text style={sharedStyles.buttonText}>新增待办</Text>
         </Pressable>
@@ -97,12 +97,20 @@ const styles = StyleSheet.create({
     gap: 16,
     justifyContent: 'space-between',
   },
+  headerStack: {
+    flexDirection: 'column',
+  },
+  headerButton: {
+    alignSelf: 'flex-start',
+  },
   statRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
   },
   statCard: {
     flex: 1,
+    minWidth: 120,
   },
   statValue: {
     color: colors.green800,

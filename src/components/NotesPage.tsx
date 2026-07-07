@@ -19,13 +19,13 @@ export function NotesPage({ isDesktop, notes, onCreate, onEdit, onDelete, onConv
 
   return (
     <ScrollView contentContainerStyle={[sharedStyles.page, isDesktop && sharedStyles.pageDesktop]}>
-      <View style={styles.headerRow}>
+      <View style={[styles.headerRow, !isDesktop && styles.headerStack]}>
         <View style={sharedStyles.pageHeader}>
           <Text style={sharedStyles.eyebrow}>收集箱</Text>
           <Text style={sharedStyles.title}>随记</Text>
           <Text style={sharedStyles.subtitle}>先记录琐碎想法，再把能行动的内容整理成待办。</Text>
         </View>
-        <Pressable style={sharedStyles.button} onPress={onCreate}>
+        <Pressable style={[sharedStyles.button, !isDesktop && styles.headerButton]} onPress={onCreate}>
           <Plus size={18} color={colors.white} />
           <Text style={sharedStyles.buttonText}>新增随记</Text>
         </Pressable>
@@ -84,6 +84,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 16,
     justifyContent: 'space-between',
+  },
+  headerStack: {
+    flexDirection: 'column',
+  },
+  headerButton: {
+    alignSelf: 'flex-start',
   },
   statRow: {
     flexDirection: 'row',

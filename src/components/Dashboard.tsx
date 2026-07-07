@@ -35,11 +35,11 @@ export function Dashboard({
   return (
     <ScrollView contentContainerStyle={[sharedStyles.page, isDesktop && sharedStyles.pageDesktop]}>
       <View style={styles.header}>
-        <View style={sharedStyles.pageHeader}>
+        <View style={[sharedStyles.pageHeader, styles.headerCopy]}>
           <Text style={styles.brand}>日序</Text>
           <Text style={sharedStyles.subtitle}>随记收集，整理成待办，有日期的行动自动进入日历。</Text>
         </View>
-        <View style={styles.avatar}>
+        <View style={[styles.avatar, !isDesktop && styles.avatarMobile]}>
           <PlantAvatar />
         </View>
       </View>
@@ -136,7 +136,12 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'flex-start',
     flexDirection: 'row',
+    gap: 14,
     justifyContent: 'space-between',
+  },
+  headerCopy: {
+    flex: 1,
+    minWidth: 0,
   },
   brand: {
     color: colors.green800,
@@ -148,16 +153,21 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     padding: 4,
   },
+  avatarMobile: {
+    transform: [{ scale: 0.82 }],
+  },
   quickRow: {
     flexDirection: 'row',
     gap: 10,
   },
   kpiGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
   },
   kpi: {
     flex: 1,
+    minWidth: 120,
   },
   kpiValue: {
     color: colors.green800,
