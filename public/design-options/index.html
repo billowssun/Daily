@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>日序 · UI 重设计方案</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
+        background: #f4f3ef;
+        color: #18201e;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      main {
+        width: min(1500px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 48px 0 80px;
+      }
+      header {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 28px;
+      }
+      h1 { margin: 0; font-size: clamp(28px, 4vw, 48px); letter-spacing: -0.04em; }
+      p { margin: 8px 0 0; color: #66706d; }
+      .tip {
+        padding: 10px 14px;
+        border: 1px solid #d8dcd8;
+        border-radius: 999px;
+        background: rgba(255,255,255,.72);
+        color: #3e4946;
+        white-space: nowrap;
+      }
+      .grid { display: grid; gap: 28px; }
+      article {
+        overflow: hidden;
+        border: 1px solid #d8dcd8;
+        border-radius: 20px;
+        background: white;
+        box-shadow: 0 18px 50px rgba(31, 45, 41, .08);
+      }
+      .label {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 18px;
+        font-size: 17px;
+        font-weight: 650;
+      }
+      .number {
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #1c6258;
+        color: white;
+      }
+      img {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-top: 1px solid #e6e8e6;
+      }
+      @media (max-width: 720px) {
+        main { width: min(100% - 20px, 1500px); padding-top: 24px; }
+        header { display: block; }
+        .tip { display: inline-block; margin-top: 18px; white-space: normal; }
+        article { border-radius: 14px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <h1>日序 · UI 重设计方案</h1>
+          <p>点击图片可以在浏览器中放大查看细节。</p>
+        </div>
+        <div class="tip">看完回复：1、2 或 3</div>
+      </header>
+      <section class="grid">
+        <article>
+          <div class="label"><span class="number">1</span>方案一</div>
+          <a href="./option-1.png" target="_blank"><img src="./option-1.png" alt="方案一" /></a>
+        </article>
+        <article>
+          <div class="label"><span class="number">2</span>方案二</div>
+          <a href="./option-2.png" target="_blank"><img src="./option-2.png" alt="方案二" /></a>
+        </article>
+        <article>
+          <div class="label"><span class="number">3</span>方案三</div>
+          <a href="./option-3.png" target="_blank"><img src="./option-3.png" alt="方案三" /></a>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
