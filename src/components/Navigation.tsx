@@ -1,7 +1,6 @@
-import { PenLine } from 'lucide-react-native';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { PenLine, Search } from 'lucide-react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { tabs } from '../data/mock';
 import { colors, shadow } from '../theme';
 import type { TabKey } from '../types';
 
@@ -12,145 +11,225 @@ type NavigationProps = {
   onCenterPress: () => void;
 };
 
+const primaryTabs: { key: TabKey; label: string }[] = [
+  { key: 'home', label: '今天' },
+  { key: 'todo', label: '计划' },
+  { key: 'calendar', label: '日历' },
+  { key: 'finance', label: '财务' },
+  { key: 'overview', label: '回顾' },
+];
+
 export function Navigation({ activeTab, layout, onChange, onCenterPress }: NavigationProps) {
   if (layout === 'sidebar') {
     return (
-      <View style={styles.sidebar}>
-        <Text style={styles.sidebarBrand}>日序</Text>
-        <Text style={styles.sidebarCaption}>随记 → 待办 → 日历</Text>
-        <View style={styles.sidebarItems}>
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const active = activeTab === tab.key;
+      <View style={styles.header}>
+        <Pressable accessibilityRole="button" style={styles.brand} onPress={() => onChange('home')}>
+          <Text style={styles.brandName}>日序</Text>
+          <Text style={styles.brandTagline}>顺其自然，日有所序</Text>
+        </Pressable>
 
+        <View accessibilityRole="tablist" style={styles.desktopTabs}>
+          {primaryTabs.map((tab) => {
+            const active = activeTab === tab.key;
             return (
               <Pressable
                 key={tab.key}
-                accessibilityRole="button"
+                accessibilityRole="tab"
                 accessibilityState={{ selected: active }}
-                style={[styles.sidebarItem, active && styles.sidebarItemActive]}
+                style={styles.desktopTab}
                 onPress={() => onChange(tab.key)}
               >
-                <Icon size={20} color={active ? colors.white : colors.green700} />
-                <Text style={[styles.sidebarLabel, active && styles.sidebarLabelActive]}>{tab.label}</Text>
+                <Text style={[styles.desktopLabel, active && styles.desktopLabelActive]}>{tab.label}</Text>
+                {active ? <View style={styles.activeLine} /> : null}
               </Pressable>
             );
           })}
         </View>
-        <Pressable accessibilityRole="button" style={styles.sidebarCreate} onPress={onCenterPress}>
-          <PenLine size={20} color={colors.white} />
-          <Text style={styles.sidebarCreateText}>快速记录</Text>
-        </Pressable>
+
+        <View style={styles.headerActions}>
+          <Pressable accessibilityLabel="搜索" accessibilityRole="button" style={styles.iconButton}>
+            <Search color={colors.text} size={21} strokeWidth={1.7} />
+          </Pressable>
+          <Pressable accessibilityRole="button" style={({ pressed }) => [styles.recordButton, pressed && styles.pressed]} onPress={onCenterPress}>
+            <PenLine color={colors.white} size={17} strokeWidth={1.8} />
+            <Text style={styles.recordText}>快速记录</Text>
+            <Text style={styles.shortcut}>⌘ K</Text>
+          </Pressable>
+          <Image source={require('../../assets/plant-avatar.png')} style={styles.avatar} />
+        </View>
       </View>
     );
   }
 
   return (
-    <View style={styles.tabBar}>
-      {tabs.map((tab) => {
-        const Icon = tab.icon;
+    <View style={styles.mobileBar}>
+      {primaryTabs.map((tab) => {
         const active = activeTab === tab.key;
-
         return (
           <Pressable
             key={tab.key}
-            accessibilityRole="button"
+            accessibilityRole="tab"
             accessibilityState={{ selected: active }}
-            style={styles.tabItem}
+            style={styles.mobileTab}
             onPress={() => onChange(tab.key)}
           >
-            <Icon size={22} color={active ? colors.green700 : colors.textSoft} />
-            <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{tab.label}</Text>
+            <Text style={[styles.mobileLabel, active && styles.mobileLabelActive]}>{tab.label}</Text>
+            {active ? <View style={styles.mobileDot} /> : null}
           </Pressable>
         );
       })}
+      <Pressable accessibilityLabel="快速记录" accessibilityRole="button" style={styles.mobileRecord} onPress={onCenterPress}>
+        <PenLine color={colors.white} size={20} />
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  sidebar: {
-    flexShrink: 0,
-    paddingHorizontal: 24,
-    paddingVertical: 36,
-    width: 230,
-  },
-  sidebarBrand: {
-    color: colors.green800,
-    fontSize: 34,
-    fontWeight: '800',
-  },
-  sidebarCaption: {
-    color: colors.textSoft,
-    fontSize: 13,
-    marginTop: 4,
-  },
-  sidebarItems: {
-    gap: 8,
-    marginTop: 34,
-  },
-  sidebarItem: {
+  header: {
     alignItems: 'center',
-    borderRadius: 18,
+    backgroundColor: colors.surface,
+    borderBottomColor: colors.line,
+    borderBottomWidth: 1,
     flexDirection: 'row',
-    gap: 10,
-    minHeight: 48,
-    paddingHorizontal: 16,
+    height: 72,
+    justifyContent: 'space-between',
+    paddingHorizontal: 34,
+    width: '100%',
   },
-  sidebarItemActive: {
-    backgroundColor: colors.green600,
+  brand: {
+    alignItems: 'baseline',
+    flexDirection: 'row',
+    gap: 16,
+    minWidth: 270,
   },
-  sidebarLabel: {
-    color: colors.green800,
+  brandName: {
+    color: '#18342F',
+    fontFamily: 'serif',
+    fontSize: 27,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  brandTagline: {
+    color: colors.textSoft,
+    fontSize: 11,
+    letterSpacing: 0.4,
+  },
+  desktopTabs: {
+    alignItems: 'stretch',
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    gap: 34,
+  },
+  desktopTab: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 44,
+    position: 'relative',
+  },
+  desktopLabel: {
+    color: colors.textMuted,
     fontSize: 15,
+    fontWeight: '500',
+  },
+  desktopLabelActive: {
+    color: colors.text,
     fontWeight: '700',
   },
-  sidebarLabelActive: {
-    color: colors.white,
+  activeLine: {
+    backgroundColor: colors.green700,
+    borderRadius: 2,
+    bottom: 0,
+    height: 3,
+    position: 'absolute',
+    width: 34,
   },
-  sidebarCreate: {
+  headerActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 14,
+    justifyContent: 'flex-end',
+    minWidth: 270,
+  },
+  iconButton: {
+    alignItems: 'center',
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+  recordButton: {
     ...shadow.float,
     alignItems: 'center',
     backgroundColor: colors.green700,
-    borderRadius: 22,
+    borderRadius: 8,
     flexDirection: 'row',
-    gap: 10,
-    justifyContent: 'center',
-    marginTop: 'auto',
-    minHeight: 52,
+    gap: 9,
+    height: 42,
+    paddingHorizontal: 16,
   },
-  sidebarCreateText: {
+  recordText: {
     color: colors.white,
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
   },
-  tabBar: {
-    ...shadow.tab,
+  shortcut: {
+    color: '#CDE0DC',
+    fontSize: 10,
+    marginLeft: 4,
+  },
+  avatar: {
+    borderRadius: 20,
+    height: 40,
+    width: 40,
+  },
+  pressed: { opacity: 0.82 },
+  mobileBar: {
+    ...shadow.soft,
     alignItems: 'center',
-    backgroundColor: colors.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: colors.surface,
+    borderTopColor: colors.line,
+    borderTopWidth: 1,
     bottom: 0,
     flexDirection: 'row',
-    height: 88,
-    justifyContent: 'space-around',
+    height: 76,
     left: 0,
-    paddingBottom: 18,
-    paddingHorizontal: 10,
+    paddingBottom: 10,
+    paddingHorizontal: 8,
     position: 'absolute',
     right: 0,
+    zIndex: 20,
   },
-  tabItem: {
+  mobileTab: {
     alignItems: 'center',
     flex: 1,
-    gap: 5,
+    gap: 7,
+    justifyContent: 'center',
+    minHeight: 54,
   },
-  tabLabel: {
+  mobileLabel: {
     color: colors.textSoft,
     fontSize: 12,
     fontWeight: '600',
   },
-  tabLabelActive: {
-    color: colors.green700,
+  mobileLabelActive: {
+    color: colors.green800,
+  },
+  mobileDot: {
+    backgroundColor: colors.green700,
+    borderRadius: 2,
+    height: 3,
+    width: 18,
+  },
+  mobileRecord: {
+    ...shadow.float,
+    alignItems: 'center',
+    backgroundColor: colors.green700,
+    borderRadius: 24,
+    height: 48,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 18,
+    top: -58,
+    width: 48,
   },
 });
