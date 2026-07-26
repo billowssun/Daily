@@ -1,9 +1,11 @@
 {
   "expo": {
-    "name": "日序",
-    "slug": "rixu-web",
+    "name": "财序",
+    "slug": "caixu",
     "version": "1.0.0",
     "userInterfaceStyle": "light",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
     "web": {
       "favicon": "./assets/favicon.png"
     }
