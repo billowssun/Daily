@@ -46,6 +46,17 @@ const signIn = async (email) => {
   return client;
 };
 
+const { data: userAudit, error: userAuditError } = await system.auth.admin.listUsers({
+  page: 1,
+  perPage: 1000,
+});
+if (userAuditError) throw userAuditError;
+const productionUsers = userAudit.users.filter((user) => !user.email?.startsWith('rixu-rls-'));
+const confirmedUsers = productionUsers.filter((user) => Boolean(user.email_confirmed_at));
+console.log(
+  `Supabase user audit: ${productionUsers.length} registered, ${confirmedUsers.length} confirmed, ${productionUsers.length - confirmedUsers.length} awaiting email confirmation.`,
+);
+
 try {
   const userA = await createTestUser(emails[0], '权限测试 A');
   const userB = await createTestUser(emails[1], '权限测试 B');
