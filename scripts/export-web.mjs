@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const env = { ...process.env };
+const cliArgs = process.argv.slice(2);
 
 env.EXPO_PUBLIC_SUPABASE_URL ??=
   env.SUPABASE_URL ??
@@ -20,7 +21,7 @@ const result = spawnSync(
     'export',
     '--platform',
     'web',
-    ...process.argv.slice(2),
+    ...(cliArgs.includes('--clear') ? cliArgs : ['--clear', ...cliArgs]),
   ],
   {
     env,
