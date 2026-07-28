@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -27,6 +26,7 @@ import {
   View,
 } from 'react-native';
 
+import { claimLegacyState, loadCloudState, loadUserCache, saveCloudState, saveUserCache } from '../cloud-state';
 import {
   Account,
   AccountType,
@@ -37,6 +37,7 @@ import {
   addSnapshot,
   calculate,
   defaultState,
+  emptyFinanceState,
   formatDate,
   formatMoney,
   remainingLoan,
@@ -45,7 +46,7 @@ import {
 import { colors, shadow } from '../theme';
 
 type FinanceSection = 'overview' | 'accounts' | 'loans';
-const STORAGE_KEY = '@rixu/finance-v3';
+const LEGACY_STORAGE_KEY = '@rixu/finance-v3';
 
 const sections: { key: FinanceSection; label: string }[] = [
   { key: 'overview', label: '经济总览' },
@@ -53,7 +54,7 @@ const sections: { key: FinanceSection; label: string }[] = [
   { key: 'loans', label: '借入借出' },
 ];
 
-export function FinanceWorkspace() {
+export function FinanceWorkspace({ userId }: { userId: string }) {
   const { width } = useWindowDimensions();
   const compact = width < 840;
   const [finance, setFinance] = useState<FinanceState>(defaultState);
@@ -61,19 +62,44 @@ export function FinanceWorkspace() {
   const [hidden, setHidden] = useState(false);
   const [accountEditor, setAccountEditor] = useState<Account | 'new' | null>(null);
   const [loanEditor, setLoanEditor] = useState<Loan | 'new' | null>(null);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then((value) => {
-      if (!value) return;
-      const parsed = JSON.parse(value) as FinanceState;
-      if (Array.isArray(parsed.accounts) && Array.isArray(parsed.loans)) setFinance(parsed);
-    }).catch(() => undefined);
-  }, []);
+    let active = true;
+    const hydrate = async () => {
+      const cached = await loadUserCache<FinanceState>(userId, 'finance').catch(() => null);
+      const loadLegacy = async () => {
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        const value = await AsyncStorage.getItem(LEGACY_STORAGE_KEY);
+        return value ? JSON.parse(value) as FinanceState : defaultState;
+      };
+      const legacy = cached ?? await claimLegacyState(userId, loadLegacy, emptyFinanceState);
+      const cloud = await loadCloudState<FinanceState>(userId, 'finance').catch(() => null);
+      const next = cloud ?? legacy ?? defaultState;
+      if (!cloud) await saveCloudState(userId, 'finance', next).catch(() => undefined);
+      await saveUserCache(userId, 'finance', next).catch(() => undefined);
+      if (!active) return;
+      setFinance(next);
+      setHydrated(true);
+    };
+    void hydrate();
+    return () => { active = false; };
+  }, [userId]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    const timer = setTimeout(() => {
+      void Promise.all([
+        saveUserCache(userId, 'finance', finance),
+        saveCloudState(userId, 'finance', finance),
+      ]).catch(() => undefined);
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [finance, hydrated, userId]);
 
   const commit = (next: FinanceState) => {
     const withSnapshot = addSnapshot(next);
     setFinance(withSnapshot);
-    void AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(withSnapshot));
   };
 
   const totals = useMemo(() => calculate(finance), [finance]);
@@ -181,7 +207,7 @@ export function FinanceWorkspace() {
                 </View>
                 <Text style={styles.balanceLabel}>{account.type === 'credit' ? '当前应还' : '当前余额'}</Text>
                 <Text style={[styles.balance, account.type === 'credit' && styles.debt]}>{formatMoney(account.balance, hidden)}</Text>
-                <Text style={styles.updated}>点击更新余额 · 数据仅保存在本设备</Text>
+                <Text style={styles.updated}>点击更新余额 · 已同步到你的私有云空间</Text>
               </Pressable>
             ))}
           </View>

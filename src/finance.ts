@@ -73,6 +73,15 @@ export const defaultState: FinanceState = {
   currency: 'CNY',
 };
 
+export const emptyFinanceState: FinanceState = {
+  accounts: [],
+  loans: [],
+  snapshots: [],
+  monthlyIncome: 0,
+  emergencyTarget: 0,
+  currency: 'CNY',
+};
+
 export function uid(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { todayString } from '../date';
 import { initialState } from '../data/mock';
+import { claimLegacyState, loadCloudState, loadUserCache, saveCloudState, saveUserCache } from '../cloud-state';
 import { loadRixuState, saveRixuState } from '../storage';
 import type { Note, NoteInput, RixuState, Task, TaskInput } from '../types';
 
@@ -20,7 +21,7 @@ type TaskEditorState = {
 const nowIso = () => new Date().toISOString();
 const createId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-export function useRixuState() {
+export function useRixuState(userId: string) {
   const [activeDate, setActiveDate] = useState(todayString());
   const [state, setState] = useState<RixuState>(initialState);
   const [hydrated, setHydrated] = useState(false);
@@ -30,19 +31,34 @@ export function useRixuState() {
 
   useEffect(() => {
     let active = true;
-    loadRixuState().then((stored) => {
+    const hydrate = async () => {
+      const cached = await loadUserCache<RixuState>(userId, 'planner').catch(() => null);
+      const legacy = cached ?? await claimLegacyState(userId, loadRixuState, { notes: [], tasks: [] });
+      const cloud = await loadCloudState<RixuState>(userId, 'planner').catch(() => null);
+      const next = cloud ?? legacy;
+      if (!cloud) await saveCloudState(userId, 'planner', next).catch(() => undefined);
+      await saveUserCache(userId, 'planner', next).catch(() => undefined);
       if (!active) return;
-      setState(stored);
+      setState(next);
       setHydrated(true);
-    });
+    };
+    void hydrate();
     return () => {
       active = false;
     };
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
-    if (hydrated) void saveRixuState(state);
-  }, [hydrated, state]);
+    if (!hydrated) return;
+    const timer = setTimeout(() => {
+      void Promise.all([
+        saveUserCache(userId, 'planner', state),
+        saveCloudState(userId, 'planner', state),
+        saveRixuState(state),
+      ]).catch(() => undefined);
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [hydrated, state, userId]);
 
   useEffect(() => {
     if (!toast) return;

@@ -1,5 +1,5 @@
-import { PenLine, Search } from 'lucide-react-native';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { LogOut, PenLine, Search, ShieldCheck } from 'lucide-react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, shadow } from '../theme';
 import type { TabKey } from '../types';
@@ -9,6 +9,9 @@ type NavigationProps = {
   layout: 'tabs' | 'sidebar';
   onChange: (tab: TabKey) => void;
   onCenterPress: () => void;
+  isAdmin: boolean;
+  profileName: string;
+  onSignOut: () => void;
 };
 
 const primaryTabs: { key: TabKey; label: string }[] = [
@@ -19,7 +22,7 @@ const primaryTabs: { key: TabKey; label: string }[] = [
   { key: 'overview', label: '回顾' },
 ];
 
-export function Navigation({ activeTab, layout, onChange, onCenterPress }: NavigationProps) {
+export function Navigation({ activeTab, isAdmin, layout, onChange, onCenterPress, onSignOut, profileName }: NavigationProps) {
   if (layout === 'sidebar') {
     return (
       <View style={styles.header}>
@@ -55,7 +58,18 @@ export function Navigation({ activeTab, layout, onChange, onCenterPress }: Navig
             <Text style={styles.recordText}>快速记录</Text>
             <Text style={styles.shortcut}>⌘ K</Text>
           </Pressable>
-          <Image source={require('../../assets/plant-avatar.png')} style={styles.avatar} />
+          {isAdmin ? (
+            <Pressable accessibilityLabel="用户管理" style={styles.adminButton} onPress={() => onChange('admin')}>
+              <ShieldCheck color={activeTab === 'admin' ? colors.green700 : colors.textMuted} size={18} />
+            </Pressable>
+          ) : null}
+          <View style={styles.account}>
+            <View style={styles.avatar}><Text style={styles.avatarText}>{profileName.slice(0, 1).toUpperCase()}</Text></View>
+            <Text numberOfLines={1} style={styles.profileName}>{profileName}</Text>
+          </View>
+          <Pressable accessibilityLabel="退出登录" style={styles.signOut} onPress={onSignOut}>
+            <LogOut color={colors.textSoft} size={17} />
+          </Pressable>
         </View>
       </View>
     );
@@ -80,6 +94,14 @@ export function Navigation({ activeTab, layout, onChange, onCenterPress }: Navig
       })}
       <Pressable accessibilityLabel="快速记录" accessibilityRole="button" style={styles.mobileRecord} onPress={onCenterPress}>
         <PenLine color={colors.white} size={20} />
+      </Pressable>
+      {isAdmin ? (
+        <Pressable accessibilityLabel="用户管理" style={styles.mobileAdmin} onPress={() => onChange('admin')}>
+          <ShieldCheck color={colors.green700} size={18} />
+        </Pressable>
+      ) : null}
+      <Pressable accessibilityLabel="退出登录" style={styles.mobileSignOut} onPress={onSignOut}>
+        <LogOut color={colors.textMuted} size={17} />
       </Pressable>
     </View>
   );
@@ -177,11 +199,12 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginLeft: 4,
   },
-  avatar: {
-    borderRadius: 20,
-    height: 40,
-    width: 40,
-  },
+  adminButton: { alignItems: 'center', height: 38, justifyContent: 'center', width: 34 },
+  account: { alignItems: 'center', flexDirection: 'row', gap: 8, maxWidth: 130 },
+  avatar: { alignItems: 'center', backgroundColor: colors.softGreen, borderRadius: 18, height: 36, justifyContent: 'center', width: 36 },
+  avatarText: { color: colors.green800, fontSize: 13, fontWeight: '800' },
+  profileName: { color: colors.text, flexShrink: 1, fontSize: 11, fontWeight: '700' },
+  signOut: { alignItems: 'center', height: 36, justifyContent: 'center', width: 28 },
   pressed: { opacity: 0.82 },
   mobileBar: {
     ...shadow.soft,
@@ -232,4 +255,6 @@ const styles = StyleSheet.create({
     top: -58,
     width: 48,
   },
+  mobileAdmin: { alignItems: 'center', backgroundColor: colors.softGreen, borderRadius: 18, height: 36, justifyContent: 'center', position: 'absolute', right: 18, top: 8, width: 36 },
+  mobileSignOut: { alignItems: 'center', backgroundColor: colors.card, borderColor: colors.line, borderRadius: 18, borderWidth: 1, height: 36, justifyContent: 'center', left: 18, position: 'absolute', top: -58, width: 36 },
 });
