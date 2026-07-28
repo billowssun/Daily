@@ -23,7 +23,7 @@
   "scripts": {
     "start": "expo start --web",
     "web": "expo start --web",
-    "build:web": "node scripts/export-web.mjs",
+    "build:web": "node scripts/prepare-supabase.mjs && node scripts/export-web.mjs",
     "db:migrate": "node scripts/migrate-supabase.mjs",
     "typecheck": "tsc --noEmit"
   },
