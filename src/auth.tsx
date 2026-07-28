@@ -130,31 +130,76 @@ function AuthScreen() {
   const [displayName, setDisplayName] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [messageKind, setMessageKind] = useState<'error' | 'info'>('error');
+  const [verificationPending, setVerificationPending] = useState(false);
+
+  const feedback = (value: string, kind: 'error' | 'info' = 'error') => {
+    setMessage(value);
+    setMessageKind(kind);
+  };
 
   const submit = async () => {
     if (!supabase || !email.trim() || (mode !== 'forgot' && password.length < 6)) {
-      setMessage(mode === 'forgot' ? '请输入有效邮箱。' : '请输入有效邮箱，密码至少 6 位。');
+      feedback(mode === 'forgot' ? '请输入有效邮箱。' : '请输入有效邮箱，密码至少 6 位。');
       return;
     }
     setBusy(true);
     setMessage('');
+    setVerificationPending(false);
     if (mode === 'forgot') {
       const redirectTo = typeof window === 'undefined' ? undefined : window.location.origin;
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
-      setMessage(error ? error.message : '重置邮件已发送，请检查收件箱。');
+      feedback(error ? readableAuthError(error.message) : '重置邮件已发送，请检查收件箱和垃圾邮件。', error ? 'error' : 'info');
     } else if (mode === 'login') {
       const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-      if (error) setMessage(error.message === 'Invalid login credentials' ? '邮箱或密码不正确。' : error.message);
+      if (error) {
+        feedback(readableAuthError(error.message));
+        if (error.message === 'Email not confirmed' || error.message === 'Invalid login credentials') {
+          setVerificationPending(true);
+        }
+      }
     } else {
+      const emailRedirectTo = typeof window === 'undefined' ? undefined : window.location.origin;
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: { data: { display_name: displayName.trim() || email.split('@')[0] } },
+        options: {
+          data: { display_name: displayName.trim() || email.split('@')[0] },
+          emailRedirectTo,
+        },
       });
-      if (error) setMessage(error.message);
-      else if (!data.session) setMessage('注册成功，请查收验证邮件后登录。');
+      if (error) feedback(readableAuthError(error.message));
+      else if (!data.session) {
+        feedback('账号已创建。请先打开验证邮件完成确认，再返回登录；也请检查垃圾邮件。', 'info');
+        setVerificationPending(true);
+      }
     }
     setBusy(false);
+  };
+
+  const resendVerification = async () => {
+    if (!supabase || !email.trim()) {
+      feedback('请先填写注册邮箱。');
+      return;
+    }
+    setBusy(true);
+    const emailRedirectTo = typeof window === 'undefined' ? undefined : window.location.origin;
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email.trim(),
+      options: { emailRedirectTo },
+    });
+    setBusy(false);
+    feedback(
+      error ? readableAuthError(error.message) : '验证邮件已重新发送，请检查收件箱和垃圾邮件。',
+      error ? 'error' : 'info',
+    );
+  };
+
+  const changeMode = (nextMode: 'login' | 'signup' | 'forgot') => {
+    setMode(nextMode);
+    setMessage('');
+    setVerificationPending(false);
   };
 
   return (
@@ -179,22 +224,38 @@ function AuthScreen() {
           ) : null}
           <AuthField icon={Mail} placeholder="邮箱地址" value={email} onChangeText={setEmail} />
           {mode !== 'forgot' ? <AuthField icon={LockKeyhole} placeholder="密码（至少 6 位）" value={password} onChangeText={setPassword} secure /> : null}
-          {message ? <Text style={styles.message}>{message}</Text> : null}
+          {message ? <Text style={[styles.message, messageKind === 'info' && styles.infoMessage]}>{message}</Text> : null}
           <Pressable disabled={busy} style={[styles.primaryButton, busy && styles.disabled]} onPress={() => void submit()}>
             {busy ? <ActivityIndicator color={colors.white} /> : <Text style={styles.primaryButtonText}>{mode === 'login' ? '登录' : mode === 'signup' ? '创建账号' : '发送重置邮件'}</Text>}
           </Pressable>
+          {verificationPending ? (
+            <Pressable disabled={busy} style={styles.resendButton} onPress={() => void resendVerification()}>
+              <Text style={styles.resendText}>重新发送验证邮件</Text>
+            </Pressable>
+          ) : null}
           {mode === 'login' ? (
-            <Pressable style={styles.forgotButton} onPress={() => { setMode('forgot'); setMessage(''); }}>
+            <Pressable style={styles.forgotButton} onPress={() => changeMode('forgot')}>
               <Text style={styles.forgotText}>忘记密码？</Text>
             </Pressable>
           ) : null}
-          <Pressable style={styles.switchButton} onPress={() => { setMode(mode === 'login' ? 'signup' : 'login'); setMessage(''); }}>
+          <Pressable style={styles.switchButton} onPress={() => changeMode(mode === 'login' ? 'signup' : 'login')}>
             <Text style={styles.switchText}>{mode === 'login' ? '还没有账号？创建一个' : '返回登录'}</Text>
           </Pressable>
         </View>
       </View>
     </SafeAreaView>
   );
+}
+
+function readableAuthError(message: string) {
+  const translations: Record<string, string> = {
+    'Email not confirmed': '邮箱已注册，但尚未完成验证。请打开验证邮件后再登录。',
+    'Invalid login credentials': '邮箱或密码不正确；如果刚注册，请先完成邮箱验证。',
+    'User already registered': '该邮箱已经注册，请直接登录或重置密码。',
+    'Password should be at least 6 characters.': '密码至少需要 6 位。',
+    'Email rate limit exceeded': '验证邮件发送过于频繁，请稍后再试。',
+  };
+  return translations[message] ?? message;
 }
 
 function PasswordRecoveryScreen() {
@@ -291,6 +352,7 @@ const styles = StyleSheet.create({
   field: { alignItems: 'center', backgroundColor: '#FBFBF9', borderColor: colors.line, borderRadius: 10, borderWidth: 1, flexDirection: 'row', gap: 10, marginBottom: 12, minHeight: 48, paddingHorizontal: 14 },
   input: { color: colors.text, flex: 1, fontSize: 13, outlineStyle: 'none' } as never,
   message: { color: colors.red, fontSize: 11, lineHeight: 18, marginBottom: 10 },
+  infoMessage: { color: colors.green700 },
   primaryButton: { alignItems: 'center', backgroundColor: colors.green700, borderRadius: 10, justifyContent: 'center', marginTop: 5, minHeight: 48 },
   primaryButtonText: { color: colors.white, fontSize: 13, fontWeight: '800' },
   disabled: { opacity: 0.65 },
@@ -298,6 +360,8 @@ const styles = StyleSheet.create({
   switchText: { color: colors.green700, fontSize: 11, fontWeight: '700' },
   forgotButton: { alignItems: 'flex-end', marginTop: 12 },
   forgotText: { color: colors.textMuted, fontSize: 10, fontWeight: '700' },
+  resendButton: { alignItems: 'center', borderColor: colors.green200, borderRadius: 9, borderWidth: 1, justifyContent: 'center', marginTop: 10, minHeight: 42 },
+  resendText: { color: colors.green700, fontSize: 10, fontWeight: '800' },
   secondaryButton: { alignItems: 'center', borderColor: colors.line, borderRadius: 10, borderWidth: 1, justifyContent: 'center', minHeight: 44 },
   secondaryButtonText: { color: colors.text, fontSize: 12, fontWeight: '700' },
   loading: { color: colors.textMuted, fontSize: 12, marginTop: 14 },
