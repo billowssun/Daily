@@ -29,9 +29,11 @@ export type Profile = {
 type AuthContextValue = {
   loading: boolean;
   profile: Profile | null;
+  recovering: boolean;
   session: Session | null;
   user: User | null;
   refreshProfile: () => Promise<void>;
+  finishRecovery: () => void;
   signOut: () => Promise<void>;
 };
 
@@ -40,6 +42,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [recovering, setRecovering] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const refreshProfile = async () => {
@@ -61,8 +64,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     void refreshProfile().finally(() => setLoading(false));
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
+      if (event === 'PASSWORD_RECOVERY') setRecovering(true);
       if (!nextSession) setProfile(null);
       else setTimeout(() => void refreshProfile(), 0);
     });
@@ -73,15 +77,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       loading,
       profile,
+      recovering,
       session,
       user: session?.user ?? null,
       refreshProfile,
+      finishRecovery: () => setRecovering(false),
       signOut: async () => {
         await supabase?.auth.signOut();
         setProfile(null);
       },
     }),
-    [loading, profile, session],
+    [loading, profile, recovering, session],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -94,10 +100,11 @@ export function useAuth() {
 }
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
-  const { loading, profile, session, signOut } = useAuth();
+  const { loading, profile, recovering, session, signOut } = useAuth();
   if (loading) return <LoadingScreen />;
   if (!isSupabaseConfigured) return <SetupScreen />;
   if (!session) return <AuthScreen />;
+  if (recovering) return <PasswordRecoveryScreen />;
   if (!profile) return <LoadingScreen label="正在准备你的个人空间…" />;
   if (profile.disabled) {
     return (
@@ -117,7 +124,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 }
 
 function AuthScreen() {
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -125,13 +132,17 @@ function AuthScreen() {
   const [message, setMessage] = useState('');
 
   const submit = async () => {
-    if (!supabase || !email.trim() || password.length < 6) {
-      setMessage('请输入有效邮箱，密码至少 6 位。');
+    if (!supabase || !email.trim() || (mode !== 'forgot' && password.length < 6)) {
+      setMessage(mode === 'forgot' ? '请输入有效邮箱。' : '请输入有效邮箱，密码至少 6 位。');
       return;
     }
     setBusy(true);
     setMessage('');
-    if (mode === 'login') {
+    if (mode === 'forgot') {
+      const redirectTo = typeof window === 'undefined' ? undefined : window.location.origin;
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
+      setMessage(error ? error.message : '重置邮件已发送，请检查收件箱。');
+    } else if (mode === 'login') {
       const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
       if (error) setMessage(error.message === 'Invalid login credentials' ? '邮箱或密码不正确。' : error.message);
     } else {
@@ -160,22 +171,67 @@ function AuthScreen() {
         </View>
 
         <View style={styles.authCard}>
-          <Text style={styles.kicker}>{mode === 'login' ? '欢迎回来' : '创建个人空间'}</Text>
-          <Text style={styles.title}>{mode === 'login' ? '登录日序' : '注册日序'}</Text>
-          <Text style={styles.subtitle}>{mode === 'login' ? '继续整理今天，也照看长期的生活。' : '首位注册用户将成为系统管理员。'}</Text>
+          <Text style={styles.kicker}>{mode === 'login' ? '欢迎回来' : mode === 'signup' ? '创建个人空间' : '账号恢复'}</Text>
+          <Text style={styles.title}>{mode === 'login' ? '登录日序' : mode === 'signup' ? '注册日序' : '重置密码'}</Text>
+          <Text style={styles.subtitle}>{mode === 'login' ? '继续整理今天，也照看长期的生活。' : mode === 'signup' ? '首位注册用户将成为系统管理员。' : '输入注册邮箱，我们会发送安全重置链接。'}</Text>
           {mode === 'signup' ? (
             <AuthField icon={UserRound} placeholder="你的称呼" value={displayName} onChangeText={setDisplayName} />
           ) : null}
           <AuthField icon={Mail} placeholder="邮箱地址" value={email} onChangeText={setEmail} />
-          <AuthField icon={LockKeyhole} placeholder="密码（至少 6 位）" value={password} onChangeText={setPassword} secure />
+          {mode !== 'forgot' ? <AuthField icon={LockKeyhole} placeholder="密码（至少 6 位）" value={password} onChangeText={setPassword} secure /> : null}
           {message ? <Text style={styles.message}>{message}</Text> : null}
           <Pressable disabled={busy} style={[styles.primaryButton, busy && styles.disabled]} onPress={() => void submit()}>
-            {busy ? <ActivityIndicator color={colors.white} /> : <Text style={styles.primaryButtonText}>{mode === 'login' ? '登录' : '创建账号'}</Text>}
+            {busy ? <ActivityIndicator color={colors.white} /> : <Text style={styles.primaryButtonText}>{mode === 'login' ? '登录' : mode === 'signup' ? '创建账号' : '发送重置邮件'}</Text>}
           </Pressable>
+          {mode === 'login' ? (
+            <Pressable style={styles.forgotButton} onPress={() => { setMode('forgot'); setMessage(''); }}>
+              <Text style={styles.forgotText}>忘记密码？</Text>
+            </Pressable>
+          ) : null}
           <Pressable style={styles.switchButton} onPress={() => { setMode(mode === 'login' ? 'signup' : 'login'); setMessage(''); }}>
-            <Text style={styles.switchText}>{mode === 'login' ? '还没有账号？创建一个' : '已有账号？返回登录'}</Text>
+            <Text style={styles.switchText}>{mode === 'login' ? '还没有账号？创建一个' : '返回登录'}</Text>
           </Pressable>
         </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+function PasswordRecoveryScreen() {
+  const { finishRecovery, signOut } = useAuth();
+  const [password, setPassword] = useState('');
+  const [confirmation, setConfirmation] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+
+  const submit = async () => {
+    if (!supabase || password.length < 6 || password !== confirmation) {
+      setMessage(password !== confirmation ? '两次输入的密码不一致。' : '新密码至少 6 位。');
+      return;
+    }
+    setBusy(true);
+    const { error } = await supabase.auth.updateUser({ password });
+    setBusy(false);
+    if (error) setMessage(error.message);
+    else {
+      finishRecovery();
+      await signOut();
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.screen}>
+      <View style={styles.authCard}>
+        <View style={styles.brandMark}><LockKeyhole color={colors.green700} size={24} /></View>
+        <Text style={styles.kicker}>安全验证已通过</Text>
+        <Text style={styles.title}>设置新密码</Text>
+        <Text style={styles.subtitle}>更新后请使用新密码重新登录。</Text>
+        <AuthField icon={LockKeyhole} placeholder="新密码（至少 6 位）" value={password} onChangeText={setPassword} secure />
+        <AuthField icon={LockKeyhole} placeholder="再次输入新密码" value={confirmation} onChangeText={setConfirmation} secure />
+        {message ? <Text style={styles.message}>{message}</Text> : null}
+        <Pressable disabled={busy} style={[styles.primaryButton, busy && styles.disabled]} onPress={() => void submit()}>
+          {busy ? <ActivityIndicator color={colors.white} /> : <Text style={styles.primaryButtonText}>更新密码</Text>}
+        </Pressable>
       </View>
     </SafeAreaView>
   );
@@ -240,6 +296,8 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.65 },
   switchButton: { alignItems: 'center', marginTop: 20 },
   switchText: { color: colors.green700, fontSize: 11, fontWeight: '700' },
+  forgotButton: { alignItems: 'flex-end', marginTop: 12 },
+  forgotText: { color: colors.textMuted, fontSize: 10, fontWeight: '700' },
   secondaryButton: { alignItems: 'center', borderColor: colors.line, borderRadius: 10, borderWidth: 1, justifyContent: 'center', minHeight: 44 },
   secondaryButtonText: { color: colors.text, fontSize: 12, fontWeight: '700' },
   loading: { color: colors.textMuted, fontSize: 12, marginTop: 14 },
