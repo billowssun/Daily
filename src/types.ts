@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react';
 import type { LucideProps } from 'lucide-react-native';
 
-export type TabKey = 'home' | 'note' | 'todo' | 'calendar' | 'overview' | 'finance';
+export type TabKey = 'home' | 'note' | 'todo' | 'calendar' | 'overview' | 'finance' | 'admin';
 
 export type TabItem = {
   key: TabKey;

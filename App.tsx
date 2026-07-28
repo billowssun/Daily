@@ -2,6 +2,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { SafeAreaView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
+import { AuthGate, AuthProvider, useAuth } from './src/auth';
+import { AdminWorkspace } from './src/components/AdminWorkspace';
 import { Dashboard } from './src/components/Dashboard';
 import { NoteEditor, TaskEditor } from './src/components/Editors';
 import { FinanceWorkspace } from './src/components/FinanceWorkspace';
@@ -12,9 +14,20 @@ import { colors } from './src/theme';
 import type { TabKey } from './src/types';
 
 export default function App() {
+  return (
+    <AuthProvider>
+      <AuthGate>
+        <AuthenticatedApp />
+      </AuthGate>
+    </AuthProvider>
+  );
+}
+
+function AuthenticatedApp() {
   const { width } = useWindowDimensions();
+  const { profile, signOut, user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabKey>('home');
-  const rixu = useRixuState();
+  const rixu = useRixuState(user!.id);
   const isDesktop = width >= 760;
 
   useEffect(() => {
@@ -39,7 +52,15 @@ export default function App() {
       <StatusBar style="dark" />
       <View style={styles.shell}>
         {isDesktop ? (
-          <Navigation activeTab={activeTab} layout="sidebar" onCenterPress={rixu.openNewNote} onChange={setActiveTab} />
+          <Navigation
+            activeTab={activeTab}
+            isAdmin={profile?.role === 'admin'}
+            layout="sidebar"
+            profileName={profile?.display_name || user?.email || '用户'}
+            onCenterPress={rixu.openNewNote}
+            onChange={setActiveTab}
+            onSignOut={() => void signOut()}
+          />
         ) : null}
 
         <View style={styles.content}>
@@ -57,12 +78,21 @@ export default function App() {
           ) : null}
           {activeTab === 'todo' ? <PlanWorkspace {...common} /> : null}
           {activeTab === 'calendar' ? <CalendarWorkspace {...common} /> : null}
-          {activeTab === 'finance' ? <FinanceWorkspace /> : null}
+          {activeTab === 'finance' ? <FinanceWorkspace userId={user!.id} /> : null}
           {activeTab === 'overview' ? <ReviewWorkspace {...common} /> : null}
+          {activeTab === 'admin' && profile?.role === 'admin' ? <AdminWorkspace currentUserId={user!.id} /> : null}
         </View>
 
         {!isDesktop ? (
-          <Navigation activeTab={activeTab} layout="tabs" onCenterPress={rixu.openNewNote} onChange={setActiveTab} />
+          <Navigation
+            activeTab={activeTab}
+            isAdmin={profile?.role === 'admin'}
+            layout="tabs"
+            profileName={profile?.display_name || user?.email || '用户'}
+            onCenterPress={rixu.openNewNote}
+            onChange={setActiveTab}
+            onSignOut={() => void signOut()}
+          />
         ) : null}
       </View>
 
